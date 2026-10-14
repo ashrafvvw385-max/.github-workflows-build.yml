@@ -1,4 +1,4 @@
-name: Auto Build SpeedLimiter APK
+name: Build SpeedLimiter APK
 
 on:
   push:
@@ -7,301 +7,438 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate Project Files Safely
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Generate Project Structure and Code
         run: |
-          python3 - << 'EOF'
+          python3 - << 'PYEOF'
           import os
+          import textwrap
 
-          os.makedirs("app/src/main/java/com/example/myspeedlimiter", exist_ok=True)
-          os.makedirs("app/src/main/res/layout", exist_ok=True)
+          def write_clean_file(path, content):
+              os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
+              with open(path, "w", encoding="utf-8") as f:
+                  f.write(textwrap.dedent(content).lstrip())
 
-          with open("settings.gradle", "w") as f:
-              f.write("""pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
+          # 1. إعداد ملف settings.gradle
+          write_clean_file("settings.gradle", r"""
+              pluginManagement {
+                  repositories {
+                      google()
+                      mavenCentral()
+                      gradlePluginPortal()
+                  }
               }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
+              dependencyResolutionManagement {
+                  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+                  repositories {
+                      google()
+                      mavenCentral()
+                  }
               }
-          }
-          rootProject.name = "MySpeedLimiter"
-          include ':app'
+              rootProject.name = "MySpeedLimiter"
+              include ':app'
           """)
 
-          with open("gradle.properties", "w") as f:
-              f.write("android.useAndroidX=true\norg.gradle.jvmargs=-Xmx2048m\n")
-
-          with open("build.gradle", "w") as f:
-              f.write("""plugins {
-              id 'com.android.application' version '8.2.0' apply false
-              id 'org.jetbrains.kotlin.android' version '1.9.20' apply false
-          }
+          # 2. إعداد ملف gradle.properties
+          write_clean_file("gradle.properties", r"""
+              android.useAndroidX=true
+              org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+              android.nonTransitiveRClass=true
           """)
 
-          with open("app/build.gradle", "w") as f:
-              f.write("""plugins {
-              id 'com.android.application'
-              id 'org.jetbrains.kotlin.android'
-          }
+          # 3. إعداد ملف build.gradle الرئيسي
+          write_clean_file("build.gradle", r"""
+              plugins {
+                  id 'com.android.application' version '8.2.2' apply false
+                  id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
+              }
+          """)
 
-          android {
-              namespace 'com.example.myspeedlimiter'
-              compileSdk 34
-
-              defaultConfig {
-                  applicationId "com.example.myspeedlimiter"
-                  minSdk 24
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
+          # 4. إعداد ملف app/build.gradle
+          write_clean_file("app/build.gradle", r"""
+              plugins {
+                  id 'com.android.application'
+                  id 'org.jetbrains.kotlin.android'
               }
 
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
+              android {
+                  namespace 'com.example.myspeedlimiter'
+                  compileSdk 34
+
+                  defaultConfig {
+                      applicationId "com.example.myspeedlimiter"
+                      minSdk 24
+                      targetSdk 34
+                      versionCode 1
+                      versionName "1.0"
+                  }
+
+                  compileOptions {
+                      sourceCompatibility JavaVersion.VERSION_17
+                      targetCompatibility JavaVersion.VERSION_17
+                  }
+
+                  kotlinOptions {
+                      jvmTarget = '17'
+                  }
               }
-              kotlinOptions {
-                  jvmTarget = '17'
+
+              dependencies {
+                  implementation 'androidx.core:core-ktx:1.12.0'
+                  implementation 'androidx.appcompat:appcompat:1.6.1'
+                  implementation 'com.google.android.material:material:1.11.0'
               }
-          }
-
-          dependencies {
-              implementation 'androidx.core:core-ktx:1.12.0'
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'com.google.android.material:material:1.11.0'
-          }
           """)
 
-          with open("app/src/main/AndroidManifest.xml", "w") as f:
-              f.write("""<?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+          # 5. إعداد ملف AndroidManifest.xml
+          write_clean_file("app/src/main/AndroidManifest.xml", r"""
+              <?xml version="1.0" encoding="utf-8"?>
+              <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-              <application
-                  android:allowBackup="true"
-                  android:label="متحكم السرعة"
-                  android:supportsRtl="true"
-                  android:theme="@style/Theme.AppCompat.NoActionBar">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
+                  <uses-permission android:name="android.permission.INTERNET" />
+                  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+                  <application
+                      android:allowBackup="true"
+                      android:label="متحكم السرعة"
+                      android:supportsRtl="true"
+                      android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
+                      <activity
+                          android:name=".MainActivity"
+                          android:exported="true"
+                          android:screenOrientation="portrait">
+                          <intent-filter>
+                              <action android:name="android.intent.action.MAIN" />
+                              <category android:name="android.intent.category.LAUNCHER" />
+                          </intent-filter>
+                      </activity>
+                  </application>
+              </manifest>
           """)
 
-          with open("app/src/main/res/layout/activity_main.xml", "w") as f:
-              f.write("""<?xml version="1.0" encoding="utf-8"?>
-          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
-              android:orientation="vertical"
-              android:padding="24dp"
-              android:gravity="center"
-              android:background="#121212">
-
-              <TextView
+          # 6. تصميم الواجهة الرسومية الاحترافية (activity_main.xml)
+          write_clean_file("app/src/main/res/layout/activity_main.xml", r"""
+              <?xml version="1.0" encoding="utf-8"?>
+              <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+                  xmlns:app="http://schemas.android.com/apk/res-auto"
                   android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:text="متحكم سرعة جهازي"
-                  android:textSize="24sp"
-                  android:textStyle="bold"
-                  android:textColor="#FFFFFF"
-                  android:gravity="center"
-                  android:layout_marginBottom="30dp"/>
+                  android:layout_height="match_parent"
+                  android:fillViewport="true"
+                  android:background="#0F172A">
 
-              <TextView
-                  android:id="@+id/tvSpeedValue"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:text="السرعة المحددة: 256 KB/s"
-                  android:textSize="18sp"
-                  android:textColor="#00E676"
-                  android:gravity="center"
-                  android:layout_marginBottom="12dp"/>
+                  <LinearLayout
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:orientation="vertical"
+                      android:padding="24dp"
+                      android:gravity="center"
+                      android:layoutDirection="rtl">
 
-              <SeekBar
-                  android:id="@+id/seekBarSpeed"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:max="2048"
-                  android:progress="256"
-                  android:layout_marginBottom="24dp"/>
+                      <TextView
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:text="متحكم سرعة الإنترنت"
+                          android:textSize="26sp"
+                          android:textStyle="bold"
+                          android:textColor="#F8FAFC"
+                          android:gravity="center"
+                          android:layout_marginBottom="8dp"/>
 
-              <CheckBox
-                  android:id="@+id/cbMobileData"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:text="تطبيق على بيانات الهاتف (بدلاً من الواي فاي)"
-                  android:textColor="#E0E0E0"
-                  android:layout_marginBottom="24dp"/>
+                      <TextView
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:text="تحكم مباشر في سرعة جهازك بدون VPN وبدون إعدادات المودم"
+                          android:textSize="13sp"
+                          android:textColor="#94A3B8"
+                          android:gravity="center"
+                          android:layout_marginBottom="28dp"/>
 
-              <Button
-                  android:id="@+id/btnEnable"
-                  android:layout_width="match_parent"
-                  android:layout_height="55dp"
-                  android:text="تفعيل التحديد الآن"
-                  android:backgroundTint="#00C853"
-                  android:textColor="#FFFFFF"
-                  android:textStyle="bold"
-                  android:layout_marginBottom="12dp"/>
+                      <com.google.android.material.card.MaterialCardView
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          app:cardBackgroundColor="#1E293B"
+                          app:cardCornerRadius="16dp"
+                          app:cardElevation="4dp"
+                          android:layout_marginBottom="24dp">
 
-              <Button
-                  android:id="@+id/btnDisable"
-                  android:layout_width="match_parent"
-                  android:layout_height="55dp"
-                  android:text="إيقاف (فتح السرعة كاملة)"
-                  android:backgroundTint="#D50000"
-                  android:textColor="#FFFFFF"
-                  android:textStyle="bold"
-                  android:layout_marginBottom="24dp"/>
+                          <LinearLayout
+                              android:layout_width="match_parent"
+                              android:layout_height="wrap_content"
+                              android:orientation="vertical"
+                              android:padding="20dp">
 
-              <TextView
-                  android:id="@+id/tvStatus"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:text="الحالة: غير مفعل (السرعة كاملة)"
-                  android:textColor="#B0BEC5"
-                  android:gravity="center"
-                  android:textSize="14sp"/>
+                              <TextView
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:text="الحد الأقصى للسرعة"
+                                  android:textSize="14sp"
+                                  android:textColor="#CBD5E1"
+                                  android:gravity="center"
+                                  android:layout_marginBottom="8dp"/>
 
-          </LinearLayout>
+                              <TextView
+                                  android:id="@+id/tvSpeedValue"
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:text="256 KB/s"
+                                  android:textSize="32sp"
+                                  android:textStyle="bold"
+                                  android:textColor="#38BDF8"
+                                  android:gravity="center"
+                                  android:layout_marginBottom="16dp"/>
+
+                              <SeekBar
+                                  android:id="@+id/seekBarSpeed"
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:max="2048"
+                                  android:progress="256"
+                                  android:progressTint="#38BDF8"
+                                  android:thumbTint="#38BDF8"
+                                  android:layout_marginBottom="12dp"/>
+
+                              <LinearLayout
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:orientation="horizontal"
+                                  android:layout_marginBottom="16dp">
+
+                                  <TextView
+                                      android:layout_width="0dp"
+                                      android:layout_height="wrap_content"
+                                      android:layout_weight="1"
+                                      android:text="16 KB/s"
+                                      android:textSize="12sp"
+                                      android:textColor="#64748B"
+                                      android:gravity="start"/>
+
+                                  <TextView
+                                      android:layout_width="0dp"
+                                      android:layout_height="wrap_content"
+                                      android:layout_weight="1"
+                                      android:text="2048 KB/s"
+                                      android:textSize="12sp"
+                                      android:textColor="#64748B"
+                                      android:gravity="end"/>
+                              </LinearLayout>
+
+                              <RadioGroup
+                                  android:id="@+id/rgNetworkType"
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:orientation="vertical">
+
+                                  <RadioButton
+                                      android:id="@+id/rbWifi"
+                                      android:layout_width="match_parent"
+                                      android:layout_height="wrap_content"
+                                      android:text="شبكة الواي فاي (Wi-Fi)"
+                                      android:textColor="#F1F5F9"
+                                      android:buttonTint="#38BDF8"
+                                      android:checked="true"/>
+
+                                  <RadioButton
+                                      android:id="@+id/rbMobile"
+                                      android:layout_width="match_parent"
+                                      android:layout_height="wrap_content"
+                                      android:text="بيانات الهاتف (Mobile Data)"
+                                      android:textColor="#F1F5F9"
+                                      android:buttonTint="#38BDF8"/>
+                              </RadioGroup>
+
+                          </LinearLayout>
+                      </com.google.android.material.card.MaterialCardView>
+
+                      <com.google.android.material.button.MaterialButton
+                          android:id="@+id/btnEnable"
+                          android:layout_width="match_parent"
+                          android:layout_height="58dp"
+                          android:text="تفعيل تحديد السرعة"
+                          android:textSize="16sp"
+                          android:textStyle="bold"
+                          android:textColor="#FFFFFF"
+                          app:backgroundTint="#10B981"
+                          app:cornerRadius="12dp"
+                          android:layout_marginBottom="12dp"/>
+
+                      <com.google.android.material.button.MaterialButton
+                          android:id="@+id/btnDisable"
+                          android:layout_width="match_parent"
+                          android:layout_height="58dp"
+                          android:text="إلغاء التحديد (السرعة كاملة)"
+                          android:textSize="16sp"
+                          android:textStyle="bold"
+                          android:textColor="#FFFFFF"
+                          app:backgroundTint="#EF4444"
+                          app:cornerRadius="12dp"
+                          android:layout_marginBottom="24dp"/>
+
+                      <com.google.android.material.card.MaterialCardView
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          app:cardBackgroundColor="#1E293B"
+                          app:cardCornerRadius="12dp"
+                          app:cardElevation="0dp">
+
+                          <TextView
+                              android:id="@+id/tvStatus"
+                              android:layout_width="match_parent"
+                              android:layout_height="wrap_content"
+                              android:padding="14dp"
+                              android:text="الحالة: غير مفعل (السرعة الطبيعية)"
+                              android:textColor="#94A3B8"
+                              android:gravity="center"
+                              android:textSize="14sp"
+                              android:textStyle="bold"/>
+                      </com.google.android.material.card.MaterialCardView>
+
+                  </LinearLayout>
+              </ScrollView>
           """)
 
-          with open("app/src/main/java/com/example/myspeedlimiter/MainActivity.kt", "w") as f:
-              f.write("""package com.example.myspeedlimiter
+          # 7. كتابة الكود البرمجي (MainActivity.kt)
+          write_clean_file("app/src/main/java/com/example/myspeedlimiter/MainActivity.kt", r"""
+              package com.example.myspeedlimiter
 
-          import android.os.Bundle
-          import android.widget.*
-          import androidx.appcompat.app.AppCompatActivity
-          import java.io.DataOutputStream
-          import kotlin.concurrent.thread
+              import android.graphics.Color
+              import android.os.Bundle
+              import android.widget.RadioButton
+              import android.widget.SeekBar
+              import android.widget.TextView
+              import androidx.appcompat.app.AppCompatActivity
+              import com.google.android.material.button.MaterialButton
+              import java.io.DataOutputStream
+              import kotlin.concurrent.thread
 
-          class MainActivity : AppCompatActivity() {
+              class MainActivity : AppCompatActivity() {
 
-              private var selectedSpeedKBytes = 256
+                  private var selectedSpeedKBytes = 256
 
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  setContentView(R.layout.activity_main)
+                  override fun onCreate(savedInstanceState: Bundle?) {
+                      super.onCreate(savedInstanceState)
+                      setContentView(R.layout.activity_main)
 
-                  val tvSpeedValue = findViewById<TextView>(R.id.tvSpeedValue)
-                  val seekBarSpeed = findViewById<SeekBar>(R.id.seekBarSpeed)
-                  val cbMobileData = findViewById<CheckBox>(R.id.cbMobileData)
-                  val btnEnable = findViewById<Button>(R.id.btnEnable)
-                  val btnDisable = findViewById<Button>(R.id.btnDisable)
-                  val tvStatus = findViewById<TextView>(R.id.tvStatus)
+                      val tvSpeedValue = findViewById<TextView>(R.id.tvSpeedValue)
+                      val seekBarSpeed = findViewById<SeekBar>(R.id.seekBarSpeed)
+                      val rbMobile = findViewById<RadioButton>(R.id.rbMobile)
+                      val btnEnable = findViewById<MaterialButton>(R.id.btnEnable)
+                      val btnDisable = findViewById<MaterialButton>(R.id.btnDisable)
+                      val tvStatus = findViewById<TextView>(R.id.tvStatus)
 
-                  seekBarSpeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                      override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                          selectedSpeedKBytes = if (progress < 16) 16 else progress
-                          tvSpeedValue.text = "السرعة المحددة: $selectedSpeedKBytes KB/s"
+                      seekBarSpeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                          override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                              selectedSpeedKBytes = if (progress < 16) 16 else progress
+                              tvSpeedValue.text = "$selectedSpeedKBytes KB/s"
+                          }
+                          override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                          override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                      })
+
+                      btnEnable.setOnClickListener {
+                          val isMobile = rbMobile.isChecked
+                          tvStatus.text = "جاري تطبيق الإعدادات..."
+                          tvStatus.setTextColor(Color.parseColor("#38BDF8"))
+
+                          thread {
+                              val success = applySpeedLimit(selectedSpeedKBytes, isMobile)
+                              runOnUiThread {
+                                  if (success) {
+                                      val netName = if (isMobile) "بيانات الهاتف" else "الواي فاي"
+                                      tvStatus.text = "الحالة: نشط على $netName ($selectedSpeedKBytes KB/s)"
+                                      tvStatus.setTextColor(Color.parseColor("#10B981"))
+                                  } else {
+                                      tvStatus.text = "تعذر التنفيذ: تأكد من منح صلاحية الروت (Root)"
+                                      tvStatus.setTextColor(Color.parseColor("#EF4444"))
+                                  }
+                              }
+                          }
                       }
-                      override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-                      override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-                  })
 
-                  btnEnable.setOnClickListener {
-                      val isMobile = cbMobileData.isChecked
-                      tvStatus.text = "جاري تطبيق السرعة..."
-                      thread {
-                          val success = limitMyDeviceSpeed(selectedSpeedKBytes, isMobile)
-                          runOnUiThread {
-                              if (success) {
-                                  tvStatus.text = "الحالة: نشط ($selectedSpeedKBytes KB/s)"
-                              } else {
-                                  tvStatus.text = "فشل: تأكد من منح صلاحية الروت (Magisk/Root)"
+                      btnDisable.setOnClickListener {
+                          tvStatus.text = "جاري استعادة السرعة..."
+                          thread {
+                              val success = resetSpeedLimit()
+                              runOnUiThread {
+                                  if (success) {
+                                      tvStatus.text = "الحالة: غير مفعل (السرعة الطبيعية)"
+                                      tvStatus.setTextColor(Color.parseColor("#94A3B8"))
+                                  } else {
+                                      tvStatus.text = "تعذر الإلغاء: تأكد من صلاحية الروت"
+                                      tvStatus.setTextColor(Color.parseColor("#EF4444"))
+                                  }
                               }
                           }
                       }
                   }
 
-                  btnDisable.setOnClickListener {
-                      thread {
-                          resetMyDeviceSpeed()
-                          runOnUiThread {
-                              tvStatus.text = "الحالة: غير مفعل (السرعة كاملة)"
+                  private fun applySpeedLimit(kbytesPerSec: Int, isMobileData: Boolean): Boolean {
+                      val kbits = kbytesPerSec * 8
+                      val interfaces = if (isMobileData) {
+                          listOf("rmnet_data0", "rmnet_data1", "rmnet_data2", "ccmni0", "ccmni1", "pdp0")
+                      } else {
+                          listOf("wlan0")
+                      }
+
+                      val commands = mutableListOf<String>()
+                      for (iface in interfaces) {
+                          commands.add("tc qdisc del dev $iface root 2>/dev/null || true")
+                          commands.add("tc qdisc del dev $iface ingress 2>/dev/null || true")
+                          commands.add("tc qdisc add dev $iface root tbf rate ${kbits}kbit burst 32kbit latency 400ms 2>/dev/null || true")
+                          commands.add("tc qdisc add dev $iface handle ffff: ingress 2>/dev/null || true")
+                          commands.add("tc filter add dev $iface parent ffff: protocol ip prio 50 u32 match ip src 0.0.0.0/0 police rate ${kbits}kbit burst 64kbit drop flowid :1 2>/dev/null || true")
+                      }
+
+                      return executeSuCommands(commands)
+                  }
+
+                  private fun resetSpeedLimit(): Boolean {
+                      val allInterfaces = listOf("wlan0", "rmnet_data0", "rmnet_data1", "rmnet_data2", "ccmni0", "ccmni1", "pdp0")
+                      val commands = mutableListOf<String>()
+                      for (iface in allInterfaces) {
+                          commands.add("tc qdisc del dev $iface root 2>/dev/null || true")
+                          commands.add("tc qdisc del dev $iface ingress 2>/dev/null || true")
+                      }
+                      return executeSuCommands(commands)
+                  }
+
+                  private fun executeSuCommands(commands: List<String>): Boolean {
+                      return try {
+                          val process = Runtime.getRuntime().exec("su")
+                          val os = DataOutputStream(process.outputStream)
+                          for (cmd in commands) {
+                              os.writeBytes(cmd + "\n")
                           }
+                          os.writeBytes("exit\n")
+                          os.flush()
+                          process.waitFor() == 0
+                      } catch (e: Exception) {
+                          false
                       }
                   }
               }
-
-              private fun limitMyDeviceSpeed(kbytesPerSec: Int, isMobileData: Boolean): Boolean {
-                  val kbits = kbytesPerSec * 8
-                  val interfaces = if (isMobileData) {
-                      listOf("rmnet_data0", "rmnet_data1", "ccmni0", "ccmni1", "pdp0")
-                  } else {
-                      listOf("wlan0")
-                  }
-
-                  val commands = mutableListOf<String>()
-                  for (iface in interfaces) {
-                      commands.add("tc qdisc del dev $iface root 2>/dev/null")
-                      commands.add("tc qdisc del dev $iface ingress 2>/dev/null")
-                      commands.add("tc qdisc add dev $iface root tbf rate ${kbits}kbit burst 32kbit latency 400ms 2>/dev/null")
-                      commands.add("tc qdisc add dev $iface handle ffff: ingress 2>/dev/null")
-                      commands.add("tc filter add dev $iface parent ffff: protocol ip prio 50 u32 match ip src 0.0.0.0/0 police rate ${kbits}kbit burst 64kbit drop flowid :1 2>/dev/null")
-                  }
-
-                  return runRootCommands(commands)
-              }
-
-              private fun resetMyDeviceSpeed(): Boolean {
-                  val allInterfaces = listOf("wlan0", "rmnet_data0", "rmnet_data1", "ccmni0", "ccmni1", "pdp0")
-                  val commands = allInterfaces.flatMap { iface ->
-                      listOf(
-                          "tc qdisc del dev $iface root 2>/dev/null",
-                          "tc qdisc del dev $iface ingress 2>/dev/null"
-                      )
-                  }
-                  return runRootCommands(commands)
-              }
-
-              private fun runRootCommands(commands: List<String>): Boolean {
-                  return try {
-                      val process = Runtime.getRuntime().exec("su")
-                      val os = DataOutputStream(process.outputStream)
-                      for (cmd in commands) {
-                          os.writeBytes("$cmd\\n")
-                      }
-                      os.writeBytes("exit\\n")
-                      os.flush()
-                      process.waitFor() == 0
-                  } catch (e: Exception) {
-                      false
-                  }
-              }
-          }
           """)
-          EOF
+          PYEOF
 
-      - name: Build Debug APK
+      - name: Download Gradle and Build APK
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
           wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip
           unzip -q gradle-8.4-bin.zip
-          ./gradle-8.4/bin/gradle assembleDebug --no-daemon
+          ./gradle-8.4/bin/gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Upload Ready APK
+      - name: Upload Compiled APK
         uses: actions/upload-artifact@v4
         with:
-          name: SpeedLimiter-Ready-APK
+          name: SpeedLimiter-APK
           path: app/build/outputs/apk/debug/app-debug.apk
-    
