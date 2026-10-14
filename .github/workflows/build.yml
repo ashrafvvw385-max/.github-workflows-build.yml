@@ -1,4 +1,4 @@
-name: Build SpeedLimiter APK
+name: Build SpeedLimiter Elite APK
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Generate Project Structure and Code
+      - name: Generate Elite Project Structure and Source Code
         run: |
           python3 - << 'PYEOF'
           import os
@@ -30,8 +30,7 @@ jobs:
               with open(path, "w", encoding="utf-8") as f:
                   f.write(textwrap.dedent(content).lstrip())
 
-          # 1. إعداد ملف settings.gradle
-          write_clean_file("settings.gradle", r"""
+          write_clean_file("settings.gradle", r'''
               pluginManagement {
                   repositories {
                       google()
@@ -46,42 +45,39 @@ jobs:
                       mavenCentral()
                   }
               }
-              rootProject.name = "MySpeedLimiter"
+              rootProject.name = "SpeedLimiterElite"
               include ':app'
-          """)
+          ''')
 
-          # 2. إعداد ملف gradle.properties
-          write_clean_file("gradle.properties", r"""
+          write_clean_file("gradle.properties", r'''
               android.useAndroidX=true
               org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
               android.nonTransitiveRClass=true
-          """)
+          ''')
 
-          # 3. إعداد ملف build.gradle الرئيسي
-          write_clean_file("build.gradle", r"""
+          write_clean_file("build.gradle", r'''
               plugins {
                   id 'com.android.application' version '8.2.2' apply false
                   id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
               }
-          """)
+          ''')
 
-          # 4. إعداد ملف app/build.gradle
-          write_clean_file("app/build.gradle", r"""
+          write_clean_file("app/build.gradle", r'''
               plugins {
                   id 'com.android.application'
                   id 'org.jetbrains.kotlin.android'
               }
 
               android {
-                  namespace 'com.example.myspeedlimiter'
+                  namespace 'com.example.speedlimiter'
                   compileSdk 34
 
                   defaultConfig {
-                      applicationId "com.example.myspeedlimiter"
+                      applicationId "com.example.speedlimiter"
                       minSdk 24
                       targetSdk 34
-                      versionCode 1
-                      versionName "1.0"
+                      versionCode 5
+                      versionName "5.0-Elite"
                   }
 
                   compileOptions {
@@ -99,21 +95,25 @@ jobs:
                   implementation 'androidx.appcompat:appcompat:1.6.1'
                   implementation 'com.google.android.material:material:1.11.0'
               }
-          """)
+          ''')
 
-          # 5. إعداد ملف AndroidManifest.xml
-          write_clean_file("app/src/main/AndroidManifest.xml", r"""
+          write_clean_file("app/src/main/AndroidManifest.xml", r'''
               <?xml version="1.0" encoding="utf-8"?>
               <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
                   <uses-permission android:name="android.permission.INTERNET" />
                   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+                  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+                  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+                  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+                  <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
                   <application
                       android:allowBackup="true"
-                      android:label="متحكم السرعة"
+                      android:label="متحكم السرعة Elite"
                       android:supportsRtl="true"
                       android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
+
                       <activity
                           android:name=".MainActivity"
                           android:exported="true"
@@ -123,322 +123,983 @@ jobs:
                               <category android:name="android.intent.category.LAUNCHER" />
                           </intent-filter>
                       </activity>
+
+                      <service
+                          android:name=".SpeedVpnService"
+                          android:permission="android.permission.BIND_VPN_SERVICE"
+                          android:foregroundServiceType="specialUse"
+                          android:exported="false">
+                          <intent-filter>
+                              <action android:name="android.net.VpnService" />
+                          </intent-filter>
+                          <property
+                              android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                              android:value="Elite local bandwidth shaping and firewall" />
+                      </service>
+
                   </application>
               </manifest>
-          """)
+          ''')
 
-          # 6. تصميم الواجهة الرسومية الاحترافية (activity_main.xml)
-          write_clean_file("app/src/main/res/layout/activity_main.xml", r"""
+          write_clean_file("app/src/main/res/layout/activity_main.xml", r'''
               <?xml version="1.0" encoding="utf-8"?>
               <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
                   xmlns:app="http://schemas.android.com/apk/res-auto"
                   android:layout_width="match_parent"
                   android:layout_height="match_parent"
                   android:fillViewport="true"
-                  android:background="#0F172A">
+                  android:background="#050B14">
 
                   <LinearLayout
                       android:layout_width="match_parent"
                       android:layout_height="wrap_content"
                       android:orientation="vertical"
-                      android:padding="24dp"
-                      android:gravity="center"
+                      android:padding="16dp"
+                      android:gravity="center_horizontal"
                       android:layoutDirection="rtl">
 
                       <TextView
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
-                          android:text="متحكم سرعة الإنترنت"
-                          android:textSize="26sp"
+                          android:text="متحكم السرعة الاحترافي Elite"
+                          android:textSize="22sp"
                           android:textStyle="bold"
                           android:textColor="#F8FAFC"
                           android:gravity="center"
-                          android:layout_marginBottom="8dp"/>
+                          android:layout_marginBottom="2dp"/>
 
                       <TextView
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
-                          android:text="تحكم مباشر في سرعة جهازك بدون VPN وبدون إعدادات المودم"
-                          android:textSize="13sp"
-                          android:textColor="#94A3B8"
+                          android:text="النسخة الأقوى: VPN ذكي | فحص سرعة | عزل تطبيقات | وكيل محلي"
+                          android:textSize="11sp"
+                          android:textColor="#38BDF8"
                           android:gravity="center"
-                          android:layout_marginBottom="28dp"/>
+                          android:layout_marginBottom="12dp"/>
 
+                      <!-- بطاقة الإحصائيات والمراقبة الحية -->
                       <com.google.android.material.card.MaterialCardView
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
-                          app:cardBackgroundColor="#1E293B"
+                          app:cardBackgroundColor="#0F172A"
                           app:cardCornerRadius="16dp"
-                          app:cardElevation="4dp"
-                          android:layout_marginBottom="24dp">
+                          app:strokeColor="#1E293B"
+                          app:strokeWidth="1dp"
+                          android:layout_marginBottom="12dp">
 
                           <LinearLayout
                               android:layout_width="match_parent"
                               android:layout_height="wrap_content"
                               android:orientation="vertical"
-                              android:padding="20dp">
-
-                              <TextView
-                                  android:layout_width="match_parent"
-                                  android:layout_height="wrap_content"
-                                  android:text="الحد الأقصى للسرعة"
-                                  android:textSize="14sp"
-                                  android:textColor="#CBD5E1"
-                                  android:gravity="center"
-                                  android:layout_marginBottom="8dp"/>
-
-                              <TextView
-                                  android:id="@+id/tvSpeedValue"
-                                  android:layout_width="match_parent"
-                                  android:layout_height="wrap_content"
-                                  android:text="256 KB/s"
-                                  android:textSize="32sp"
-                                  android:textStyle="bold"
-                                  android:textColor="#38BDF8"
-                                  android:gravity="center"
-                                  android:layout_marginBottom="16dp"/>
-
-                              <SeekBar
-                                  android:id="@+id/seekBarSpeed"
-                                  android:layout_width="match_parent"
-                                  android:layout_height="wrap_content"
-                                  android:max="2048"
-                                  android:progress="256"
-                                  android:progressTint="#38BDF8"
-                                  android:thumbTint="#38BDF8"
-                                  android:layout_marginBottom="12dp"/>
+                              android:padding="14dp">
 
                               <LinearLayout
                                   android:layout_width="match_parent"
                                   android:layout_height="wrap_content"
                                   android:orientation="horizontal"
-                                  android:layout_marginBottom="16dp">
+                                  android:gravity="center">
 
-                                  <TextView
+                                  <LinearLayout
                                       android:layout_width="0dp"
                                       android:layout_height="wrap_content"
                                       android:layout_weight="1"
-                                      android:text="16 KB/s"
-                                      android:textSize="12sp"
-                                      android:textColor="#64748B"
-                                      android:gravity="start"/>
+                                      android:orientation="vertical"
+                                      android:gravity="center">
 
-                                  <TextView
+                                      <TextView
+                                          android:layout_width="wrap_content"
+                                          android:layout_height="wrap_content"
+                                          android:text="التنزيل اللحظي"
+                                          android:textSize="11sp"
+                                          android:textColor="#94A3B8"/>
+
+                                      <TextView
+                                          android:id="@+id/tvLiveDown"
+                                          android:layout_width="wrap_content"
+                                          android:layout_height="wrap_content"
+                                          android:text="0.0 KB/s ↓"
+                                          android:textSize="16sp"
+                                          android:textStyle="bold"
+                                          android:textColor="#38BDF8"
+                                          android:layout_marginTop="2dp"/>
+                                  </LinearLayout>
+
+                                  <View
+                                      android:layout_width="1dp"
+                                      android:layout_height="32dp"
+                                      android:background="#334155"/>
+
+                                  <LinearLayout
                                       android:layout_width="0dp"
                                       android:layout_height="wrap_content"
                                       android:layout_weight="1"
-                                      android:text="2048 KB/s"
-                                      android:textSize="12sp"
-                                      android:textColor="#64748B"
-                                      android:gravity="end"/>
+                                      android:orientation="vertical"
+                                      android:gravity="center">
+
+                                      <TextView
+                                          android:layout_width="wrap_content"
+                                          android:layout_height="wrap_content"
+                                          android:text="الرفع اللحظي"
+                                          android:textSize="11sp"
+                                          android:textColor="#94A3B8"/>
+
+                                      <TextView
+                                          android:id="@+id/tvLiveUp"
+                                          android:layout_width="wrap_content"
+                                          android:layout_height="wrap_content"
+                                          android:text="0.0 KB/s ↑"
+                                          android:textSize="16sp"
+                                          android:textStyle="bold"
+                                          android:textColor="#A855F7"
+                                          android:layout_marginTop="2dp"/>
+                                  </LinearLayout>
                               </LinearLayout>
 
+                              <TextView
+                                  android:id="@+id/tvSessionUsage"
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:text="استهلاك الجلسة: 0.00 MB | البينج: -- ms"
+                                  android:textSize="12sp"
+                                  android:textColor="#CBD5E1"
+                                  android:gravity="center"
+                                  android:layout_marginTop="10dp"/>
+
+                              <com.google.android.material.button.MaterialButton
+                                  android:id="@+id/btnRunSpeedTest"
+                                  android:layout_width="match_parent"
+                                  android:layout_height="38dp"
+                                  android:text="فحص سرعة الإنترنت الحالية (Speed Test)"
+                                  android:textSize="11sp"
+                                  android:textColor="#FFFFFF"
+                                  app:backgroundTint="#2563EB"
+                                  app:cornerRadius="8dp"
+                                  android:layout_marginTop="10dp"/>
+                          </LinearLayout>
+                      </com.google.android.material.card.MaterialCardView>
+
+                      <!-- بطاقة اختيار المحرك -->
+                      <com.google.android.material.card.MaterialCardView
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          app:cardBackgroundColor="#0F172A"
+                          app:cardCornerRadius="16dp"
+                          app:strokeColor="#1E293B"
+                          app:strokeWidth="1dp"
+                          android:layout_marginBottom="12dp">
+
+                          <LinearLayout
+                              android:layout_width="match_parent"
+                              android:layout_height="wrap_content"
+                              android:orientation="vertical"
+                              android:padding="14dp">
+
+                              <TextView
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:text="اختر وضع المحرك:"
+                                  android:textSize="13sp"
+                                  android:textStyle="bold"
+                                  android:textColor="#F8FAFC"
+                                  android:layout_marginBottom="6dp"/>
+
                               <RadioGroup
-                                  android:id="@+id/rgNetworkType"
+                                  android:id="@+id/rgEngineMode"
                                   android:layout_width="match_parent"
                                   android:layout_height="wrap_content"
                                   android:orientation="vertical">
 
                                   <RadioButton
-                                      android:id="@+id/rbWifi"
+                                      android:id="@+id/rbVpnMode"
                                       android:layout_width="match_parent"
                                       android:layout_height="wrap_content"
-                                      android:text="شبكة الواي فاي (Wi-Fi)"
-                                      android:textColor="#F1F5F9"
-                                      android:buttonTint="#38BDF8"
+                                      android:text="وضع الـ VPN الذكي (موصى به - بدون روت)"
+                                      android:textColor="#10B981"
+                                      android:textSize="12sp"
+                                      android:textStyle="bold"
+                                      android:buttonTint="#10B981"
                                       android:checked="true"/>
 
                                   <RadioButton
-                                      android:id="@+id/rbMobile"
+                                      android:id="@+id/rbProxyMode"
                                       android:layout_width="match_parent"
                                       android:layout_height="wrap_content"
-                                      android:text="بيانات الهاتف (Mobile Data)"
-                                      android:textColor="#F1F5F9"
+                                      android:text="وضع الوكيل المحلي 127.0.0.1:8888"
+                                      android:textColor="#38BDF8"
+                                      android:textSize="12sp"
                                       android:buttonTint="#38BDF8"/>
-                              </RadioGroup>
 
+                                  <RadioButton
+                                      android:id="@+id/rbRootMode"
+                                      android:layout_width="match_parent"
+                                      android:layout_height="wrap_content"
+                                      android:text="وضع النواة المباشر Kernel TC (يتطلب روت)"
+                                      android:textColor="#F1F5F9"
+                                      android:textSize="12sp"
+                                      android:buttonTint="#A855F7"/>
+                              </RadioGroup>
                           </LinearLayout>
                       </com.google.android.material.card.MaterialCardView>
 
+                      <!-- بطاقة السرعات والأوضاع المسبقة وتخصيص التطبيقات -->
+                      <com.google.android.material.card.MaterialCardView
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          app:cardBackgroundColor="#0F172A"
+                          app:cardCornerRadius="16dp"
+                          app:strokeColor="#1E293B"
+                          app:strokeWidth="1dp"
+                          android:layout_marginBottom="12dp">
+
+                          <LinearLayout
+                              android:layout_width="match_parent"
+                              android:layout_height="wrap_content"
+                              android:orientation="vertical"
+                              android:padding="14dp">
+
+                              <TextView
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:text="الأوضاع السريعة:"
+                                  android:textSize="13sp"
+                                  android:textStyle="bold"
+                                  android:textColor="#F8FAFC"
+                                  android:layout_marginBottom="8dp"/>
+
+                              <LinearLayout
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:orientation="horizontal"
+                                  android:layout_marginBottom="10dp">
+
+                                  <com.google.android.material.button.MaterialButton
+                                      android:id="@+id/btnPreset64"
+                                      android:layout_width="0dp"
+                                      android:layout_height="36dp"
+                                      android:layout_weight="1"
+                                      android:text="64 KB"
+                                      android:textSize="10sp"
+                                      app:backgroundTint="#334155"
+                                      android:layout_marginEnd="4dp"/>
+
+                                  <com.google.android.material.button.MaterialButton
+                                      android:id="@+id/btnPreset256"
+                                      android:layout_width="0dp"
+                                      android:layout_height="36dp"
+                                      android:layout_weight="1"
+                                      android:text="256 KB"
+                                      android:textSize="10sp"
+                                      app:backgroundTint="#334155"
+                                      android:layout_marginEnd="4dp"/>
+
+                                  <com.google.android.material.button.MaterialButton
+                                      android:id="@+id/btnPreset512"
+                                      android:layout_width="0dp"
+                                      android:layout_height="36dp"
+                                      android:layout_weight="1"
+                                      android:text="512 KB"
+                                      android:textSize="10sp"
+                                      app:backgroundTint="#334155"
+                                      android:layout_marginEnd="4dp"/>
+
+                                  <com.google.android.material.button.MaterialButton
+                                      android:id="@+id/btnPreset1024"
+                                      android:layout_width="0dp"
+                                      android:layout_height="36dp"
+                                      android:layout_weight="1"
+                                      android:text="1 MB"
+                                      android:textSize="10sp"
+                                      app:backgroundTint="#334155"/>
+                              </LinearLayout>
+
+                              <TextView
+                                  android:id="@+id/tvDownLimitLabel"
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:text="حد التنزيل (Download): 256 KB/s"
+                                  android:textSize="12sp"
+                                  android:textStyle="bold"
+                                  android:textColor="#38BDF8"
+                                  android:layout_marginBottom="4dp"/>
+
+                              <SeekBar
+                                  android:id="@+id/seekBarDown"
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:max="4096"
+                                  android:progress="256"
+                                  android:progressTint="#38BDF8"
+                                  android:thumbTint="#38BDF8"
+                                  android:layout_marginBottom="10dp"/>
+
+                              <TextView
+                                  android:id="@+id/tvUpLimitLabel"
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:text="حد الرفع (Upload): 128 KB/s"
+                                  android:textSize="12sp"
+                                  android:textStyle="bold"
+                                  android:textColor="#A855F7"
+                                  android:layout_marginBottom="4dp"/>
+
+                              <SeekBar
+                                  android:id="@+id/seekBarUp"
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:max="4096"
+                                  android:progress="128"
+                                  android:progressTint="#A855F7"
+                                  android:thumbTint="#A855F7"
+                                  android:layout_marginBottom="10dp"/>
+
+                              <LinearLayout
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:orientation="horizontal"
+                                  android:layout_marginBottom="8dp">
+
+                                  <EditText
+                                      android:id="@+id/etTargetApp"
+                                      android:layout_width="0dp"
+                                      android:layout_height="42dp"
+                                      android:layout_weight="1"
+                                      android:hint="حزمة التطبيق (مثال: com.google.android.youtube)"
+                                      android:textColor="#F8FAFC"
+                                      android:textColorHint="#64748B"
+                                      android:textSize="10sp"
+                                      android:paddingHorizontal="8dp"
+                                      android:background="@android:drawable/editbox_background_normal"
+                                      android:backgroundTint="#050B14"
+                                      android:singleLine="true"/>
+
+                                  <com.google.android.material.button.MaterialButton
+                                      android:id="@+id/btnPickApp"
+                                      android:layout_width="wrap_content"
+                                      android:layout_height="42dp"
+                                      android:text="اختر تطبيقاً"
+                                      android:textSize="10sp"
+                                      app:backgroundTint="#334155"
+                                      app:cornerRadius="8dp"
+                                      android:layout_marginStart="4dp"/>
+                              </LinearLayout>
+
+                              <CheckBox
+                                  android:id="@+id/cbBlockApp"
+                                  android:layout_width="match_parent"
+                                  android:layout_height="wrap_content"
+                                  android:text="حجب الإنترنت تماماً عن التطبيق المختار (Firewall)"
+                                  android:textColor="#FCA5A5"
+                                  android:textSize="11sp"
+                                  android:buttonTint="#EF4444"
+                                  android:layout_marginBottom="4dp"/>
+                          </LinearLayout>
+                      </com.google.android.material.card.MaterialCardView>
+
+                      <!-- أزرار التفعيل والتعطيل -->
                       <com.google.android.material.button.MaterialButton
                           android:id="@+id/btnEnable"
                           android:layout_width="match_parent"
-                          android:layout_height="58dp"
-                          android:text="تفعيل تحديد السرعة"
-                          android:textSize="16sp"
+                          android:layout_height="52dp"
+                          android:text="تشغيل وتطبيق السرعة الآن"
+                          android:textSize="15sp"
                           android:textStyle="bold"
                           android:textColor="#FFFFFF"
                           app:backgroundTint="#10B981"
                           app:cornerRadius="12dp"
-                          android:layout_marginBottom="12dp"/>
+                          android:layout_marginBottom="8dp"/>
 
                       <com.google.android.material.button.MaterialButton
                           android:id="@+id/btnDisable"
                           android:layout_width="match_parent"
-                          android:layout_height="58dp"
-                          android:text="إلغاء التحديد (السرعة كاملة)"
-                          android:textSize="16sp"
+                          android:layout_height="50dp"
+                          android:text="إيقاف الكل واستعادة السرعة"
+                          android:textSize="14sp"
                           android:textStyle="bold"
                           android:textColor="#FFFFFF"
                           app:backgroundTint="#EF4444"
                           app:cornerRadius="12dp"
-                          android:layout_marginBottom="24dp"/>
+                          android:layout_marginBottom="12dp"/>
 
                       <com.google.android.material.card.MaterialCardView
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
-                          app:cardBackgroundColor="#1E293B"
-                          app:cardCornerRadius="12dp"
-                          app:cardElevation="0dp">
+                          app:cardBackgroundColor="#0F172A"
+                          app:cardCornerRadius="12dp">
 
                           <TextView
                               android:id="@+id/tvStatus"
                               android:layout_width="match_parent"
                               android:layout_height="wrap_content"
-                              android:padding="14dp"
-                              android:text="الحالة: غير مفعل (السرعة الطبيعية)"
+                              android:padding="12dp"
+                              android:text="الحالة: متوقف تماماً (السرعة كاملة)"
                               android:textColor="#94A3B8"
                               android:gravity="center"
-                              android:textSize="14sp"
+                              android:textSize="12sp"
                               android:textStyle="bold"/>
                       </com.google.android.material.card.MaterialCardView>
 
                   </LinearLayout>
               </ScrollView>
-          """)
+          ''')
 
-          # 7. كتابة الكود البرمجي (MainActivity.kt)
-          write_clean_file("app/src/main/java/com/example/myspeedlimiter/MainActivity.kt", r"""
-              package com.example.myspeedlimiter
+          write_clean_file("app/src/main/java/com/example/speedlimiter/SpeedVpnService.kt", r'''
+              package com.example.speedlimiter
 
+              import android.app.Notification
+              import android.app.NotificationChannel
+              import android.app.NotificationManager
+              import android.app.PendingIntent
+              import android.content.Intent
+              import android.net.ProxyInfo
+              import android.net.VpnService
+              import android.os.Build
+              import android.os.ParcelFileDescriptor
+              import androidx.core.app.NotificationCompat
+              import kotlin.concurrent.thread
+
+              class SpeedVpnService : VpnService() {
+
+                  companion object {
+                      @Volatile var isRunning = false
+                      @Volatile var downLimitKB = 256
+                      @Volatile var upLimitKB = 128
+                      @Volatile var targetAppPkg = ""
+                      @Volatile var blockCompletely = false
+                  }
+
+                  private var vpnInterface: ParcelFileDescriptor? = null
+
+                  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+                      if (intent?.action == "STOP_VPN") {
+                          stopVpn()
+                          return START_NOT_STICKY
+                      }
+
+                      downLimitKB = intent?.getIntExtra("downKB", 256) ?: 256
+                      upLimitKB = intent?.getIntExtra("upKB", 128) ?: 128
+                      targetAppPkg = intent?.getStringExtra("targetPkg") ?: ""
+                      blockCompletely = intent?.getBooleanExtra("blockApp", false) ?: false
+
+                      startForegroundNotification()
+                      startVpnEngine()
+                      return START_STICKY
+                  }
+
+                  private fun startForegroundNotification() {
+                      val channelId = "speed_elite_channel"
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          val channel = NotificationChannel(
+                              channelId,
+                              "Speed Limiter Elite VPN",
+                              NotificationManager.IMPORTANCE_LOW
+                          )
+                          val manager = getSystemService(NotificationManager::class.java)
+                          manager?.createNotificationChannel(channel)
+                      }
+
+                      val openIntent = Intent(this, MainActivity::class.java)
+                      val pendingOpen = PendingIntent.getActivity(
+                          this, 0, openIntent,
+                          PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                      )
+
+                      val text = if (blockCompletely) "حظر التطبيق مفعل (Firewall)" else "تنزيل: $downLimitKB KB/s | رفع: $upLimitKB KB/s"
+
+                      val notification: Notification = NotificationCompat.Builder(this, channelId)
+                          .setContentTitle("متحكم السرعة Elite (نشط)")
+                          .setContentText(text)
+                          .setSmallIcon(android.R.drawable.ic_menu_compass)
+                          .setContentIntent(pendingOpen)
+                          .setOngoing(true)
+                          .build()
+
+                      startForeground(202, notification)
+                  }
+
+                  private fun startVpnEngine() {
+                      if (isRunning) {
+                          try { vpnInterface?.close() } catch (_: Exception) {}
+                          vpnInterface = null
+                      }
+                      isRunning = true
+
+                      thread {
+                          while (isRunning) {
+                              try {
+                                  val builder = Builder()
+                                      .setSession("SpeedLimiterEliteVPN")
+                                      .addAddress("10.20.30.1", 32)
+                                      .addDnsServer("8.8.8.8")
+                                      .setMtu(1280)
+
+                                  if (targetAppPkg.isNotEmpty()) {
+                                      try { builder.addAllowedApplication(targetAppPkg) } catch (_: Exception) {}
+                                  } else {
+                                      try { builder.addDisallowedApplication(packageName) } catch (_: Exception) {}
+                                  }
+
+                                  if (blockCompletely) {
+                                      builder.addRoute("0.0.0.0", 0)
+                                      vpnInterface = builder.establish()
+                                      while (isRunning && blockCompletely) { Thread.sleep(500) }
+                                  } else {
+                                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                          builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", 8888))
+                                      }
+                                      if (downLimitKB >= 1024) {
+                                          vpnInterface = builder.establish()
+                                          Thread.sleep(1000)
+                                      } else {
+                                          builder.addRoute("0.0.0.0", 0)
+                                          vpnInterface = builder.establish()
+                                          val pause = ((1024 - downLimitKB).coerceIn(100, 950)).toLong()
+                                          val pass = (1000L - pause).coerceAtLeast(80L)
+                                          Thread.sleep(pause)
+                                          try { vpnInterface?.close() } catch (_: Exception) {}
+                                          vpnInterface = null
+                                          Thread.sleep(pass)
+                                      }
+                                  }
+                              } catch (_: Exception) {
+                                  Thread.sleep(500)
+                              }
+                          }
+                      }
+                  }
+
+                  private fun stopVpn() {
+                      isRunning = false
+                      try { vpnInterface?.close() } catch (_: Exception) {}
+                      vpnInterface = null
+                      stopForeground(true)
+                      stopSelf()
+                  }
+
+                  override fun onDestroy() {
+                      stopVpn()
+                      super.onDestroy()
+                  }
+              }
+          ''')
+
+          write_clean_file("app/src/main/java/com/example/speedlimiter/MainActivity.kt", r'''
+              package com.example.speedlimiter
+
+              import android.app.Activity
+              import android.app.AlertDialog
+              import android.content.Context
+              import android.content.Intent
               import android.graphics.Color
+              import android.net.TrafficStats
+              import android.net.VpnService
+              import android.os.Build
               import android.os.Bundle
+              import android.os.Handler
+              import android.os.Looper
+              import android.widget.CheckBox
+              import android.widget.EditText
               import android.widget.RadioButton
               import android.widget.SeekBar
               import android.widget.TextView
+              import android.widget.Toast
               import androidx.appcompat.app.AppCompatActivity
               import com.google.android.material.button.MaterialButton
+              import java.io.BufferedReader
               import java.io.DataOutputStream
+              import java.io.InputStream
+              import java.io.InputStreamReader
+              import java.io.OutputStream
+              import java.net.InetSocketAddress
+              import java.net.ServerSocket
+              import java.net.Socket
+              import java.util.Locale
               import kotlin.concurrent.thread
+              import kotlin.system.measureTimeMillis
 
               class MainActivity : AppCompatActivity() {
 
-                  private var selectedSpeedKBytes = 256
+                  @Volatile private var downSpeedKB = 256
+                  @Volatile private var upSpeedKB = 128
+                  @Volatile private var isProxyRunning = false
+                  private var proxyServerSocket: ServerSocket? = null
+
+                  private val monitorHandler = Handler(Looper.getMainLooper())
+                  private var lastRxBytes = 0L
+                  private var lastTxBytes = 0L
+                  private var sessionBytes = 0L
+                  private var lastPingMs = -1L
+                  private var tickCounter = 0
+
+                  private lateinit var tvLiveDown: TextView
+                  private lateinit var tvLiveUp: TextView
+                  private lateinit var tvSessionUsage: TextView
+                  private lateinit var tvDownLimitLabel: TextView
+                  private lateinit var tvUpLimitLabel: TextView
+                  private lateinit var seekBarDown: SeekBar
+                  private lateinit var seekBarUp: SeekBar
+                  private lateinit var etTargetApp: EditText
+                  private lateinit var cbBlockApp: CheckBox
+                  private lateinit var tvStatus: TextView
+
+                  private val speedMonitorRunnable = object : Runnable {
+                      override fun run() {
+                          val currentRx = TrafficStats.getTotalRxBytes()
+                          val currentTx = TrafficStats.getTotalTxBytes()
+
+                          if (lastRxBytes != 0L && lastTxBytes != 0L &&
+                              currentRx != TrafficStats.UNSUPPORTED.toLong()) {
+                              val rxDelta = (currentRx - lastRxBytes).coerceAtLeast(0L)
+                              val txDelta = (currentTx - lastTxBytes).coerceAtLeast(0L)
+                              sessionBytes += (rxDelta + txDelta)
+
+                              val pingStr = if (lastPingMs >= 0) "${lastPingMs} ms" else "-- ms"
+                              tvLiveDown.text = String.format(Locale.US, "%.1f KB/s ↓", rxDelta / 1024.0)
+                              tvLiveUp.text = String.format(Locale.US, "%.1f KB/s ↑", txDelta / 1024.0)
+                              tvSessionUsage.text = String.format(
+                                  Locale.US,
+                                  "الاستهلاك: %.2f MB | البينج: %s",
+                                  sessionBytes / (1024.0 * 1024.0),
+                                  pingStr
+                              )
+                          }
+
+                          tickCounter++
+                          if (tickCounter % 5 == 0) { measurePingAsync() }
+
+                          lastRxBytes = currentRx
+                          lastTxBytes = currentTx
+                          monitorHandler.postDelayed(this, 1000)
+                      }
+                  }
+
+                  private fun measurePingAsync() {
+                      thread {
+                          try {
+                              val ms = measureTimeMillis {
+                                  Socket().use { s -> s.connect(InetSocketAddress("8.8.8.8", 53), 1500) }
+                              }
+                              lastPingMs = ms
+                          } catch (_: Exception) {
+                              lastPingMs = -1L
+                          }
+                      }
+                  }
 
                   override fun onCreate(savedInstanceState: Bundle?) {
                       super.onCreate(savedInstanceState)
                       setContentView(R.layout.activity_main)
 
-                      val tvSpeedValue = findViewById<TextView>(R.id.tvSpeedValue)
-                      val seekBarSpeed = findViewById<SeekBar>(R.id.seekBarSpeed)
-                      val rbMobile = findViewById<RadioButton>(R.id.rbMobile)
+                      tvLiveDown = findViewById(R.id.tvLiveDown)
+                      tvLiveUp = findViewById(R.id.tvLiveUp)
+                      tvSessionUsage = findViewById(R.id.tvSessionUsage)
+                      tvDownLimitLabel = findViewById(R.id.tvDownLimitLabel)
+                      tvUpLimitLabel = findViewById(R.id.tvUpLimitLabel)
+                      seekBarDown = findViewById(R.id.seekBarDown)
+                      seekBarUp = findViewById(R.id.seekBarUp)
+                      etTargetApp = findViewById(R.id.etTargetApp)
+                      cbBlockApp = findViewById(R.id.cbBlockApp)
+                      tvStatus = findViewById(R.id.tvStatus)
+
+                      val rbVpnMode = findViewById<RadioButton>(R.id.rbVpnMode)
+                      val rbProxyMode = findViewById<RadioButton>(R.id.rbProxyMode)
+
+                      val btnPreset64 = findViewById<MaterialButton>(R.id.btnPreset64)
+                      val btnPreset256 = findViewById<MaterialButton>(R.id.btnPreset256)
+                      val btnPreset512 = findViewById<MaterialButton>(R.id.btnPreset512)
+                      val btnPreset1024 = findViewById<MaterialButton>(R.id.btnPreset1024)
+
+                      val btnPickApp = findViewById<MaterialButton>(R.id.btnPickApp)
+                      val btnRunSpeedTest = findViewById<MaterialButton>(R.id.btnRunSpeedTest)
                       val btnEnable = findViewById<MaterialButton>(R.id.btnEnable)
                       val btnDisable = findViewById<MaterialButton>(R.id.btnDisable)
-                      val tvStatus = findViewById<TextView>(R.id.tvStatus)
 
-                      seekBarSpeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                      val prefs = getSharedPreferences("EliteSpeedPrefs", Context.MODE_PRIVATE)
+                      downSpeedKB = prefs.getInt("downKB", 256)
+                      upSpeedKB = prefs.getInt("upKB", 128)
+                      etTargetApp.setText(prefs.getString("targetPkg", ""))
+                      updateSliders(downSpeedKB, upSpeedKB)
+
+                      seekBarDown.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                           override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                              selectedSpeedKBytes = if (progress < 16) 16 else progress
-                              tvSpeedValue.text = "$selectedSpeedKBytes KB/s"
+                              downSpeedKB = if (progress < 16) 16 else progress
+                              tvDownLimitLabel.text = "حد التنزيل (Download): $downSpeedKB KB/s"
+                              SpeedVpnService.downLimitKB = downSpeedKB
                           }
                           override fun onStartTrackingTouch(seekBar: SeekBar?) {}
                           override fun onStopTrackingTouch(seekBar: SeekBar?) {}
                       })
 
+                      seekBarUp.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                          override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                              upSpeedKB = if (progress < 16) 16 else progress
+                              tvUpLimitLabel.text = "حد الرفع (Upload): $upSpeedKB KB/s"
+                              SpeedVpnService.upLimitKB = upSpeedKB
+                          }
+                          override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                          override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                      })
+
+                      btnPreset64.setOnClickListener { updateSliders(64, 32) }
+                      btnPreset256.setOnClickListener { updateSliders(256, 128) }
+                      btnPreset512.setOnClickListener { updateSliders(512, 256) }
+                      btnPreset1024.setOnClickListener { updateSliders(1024, 512) }
+
+                      btnPickApp.setOnClickListener { showInstalledAppsDialog() }
+
+                      btnRunSpeedTest.setOnClickListener {
+                          Toast.makeText(this, "جاري فحص اتصال الإنترنت...", Toast.LENGTH_SHORT).show()
+                          measurePingAsync()
+                      }
+
                       btnEnable.setOnClickListener {
-                          val isMobile = rbMobile.isChecked
-                          tvStatus.text = "جاري تطبيق الإعدادات..."
-                          tvStatus.setTextColor(Color.parseColor("#38BDF8"))
+                          val targetPkg = etTargetApp.text.toString().trim()
+                          prefs.edit().putInt("downKB", downSpeedKB).putInt("upKB", upSpeedKB).putString("targetPkg", targetPkg).apply()
 
-                          thread {
-                              val success = applySpeedLimit(selectedSpeedKBytes, isMobile)
-                              runOnUiThread {
-                                  if (success) {
-                                      val netName = if (isMobile) "بيانات الهاتف" else "الواي فاي"
-                                      tvStatus.text = "الحالة: نشط على $netName ($selectedSpeedKBytes KB/s)"
-                                      tvStatus.setTextColor(Color.parseColor("#10B981"))
+                          when {
+                              rbVpnMode.isChecked -> {
+                                  startLocalProxyEngine(silent = true)
+                                  val vpnIntent = VpnService.prepare(this)
+                                  if (vpnIntent != null) {
+                                      startActivityForResult(vpnIntent, 1002)
                                   } else {
-                                      tvStatus.text = "تعذر التنفيذ: تأكد من منح صلاحية الروت (Root)"
-                                      tvStatus.setTextColor(Color.parseColor("#EF4444"))
+                                      launchVpnService()
+                                  }
+                              }
+                              rbProxyMode.isChecked -> {
+                                  startLocalProxyEngine(silent = false)
+                              }
+                              else -> {
+                                  thread {
+                                      val ok = applyRootTcLimit(downSpeedKB, upSpeedKB)
+                                      runOnUiThread {
+                                          if (ok) {
+                                              tvStatus.text = "نشط (وضع الروت): $downSpeedKB↓ / $upSpeedKB↑ KB/s"
+                                              tvStatus.setTextColor(Color.parseColor("#10B981"))
+                                          } else {
+                                              tvStatus.text = "فشل: الجهاز ليس مروتـاً! اختر VPN"
+                                              tvStatus.setTextColor(Color.parseColor("#EF4444"))
+                                          }
+                                      }
                                   }
                               }
                           }
                       }
 
-                      btnDisable.setOnClickListener {
-                          tvStatus.text = "جاري استعادة السرعة..."
-                          thread {
-                              val success = resetSpeedLimit()
-                              runOnUiThread {
-                                  if (success) {
-                                      tvStatus.text = "الحالة: غير مفعل (السرعة الطبيعية)"
-                                      tvStatus.setTextColor(Color.parseColor("#94A3B8"))
-                                  } else {
-                                      tvStatus.text = "تعذر الإلغاء: تأكد من صلاحية الروت"
-                                      tvStatus.setTextColor(Color.parseColor("#EF4444"))
-                                  }
+                      btnDisable.setOnClickListener { stopAllEngines() }
+                  }
+
+                  private fun showInstalledAppsDialog() {
+                      try {
+                          val pm = packageManager
+                          val packages = pm.getInstalledPackages(0)
+                              .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
+                              .sortedBy { it.packageName }
+
+                          val names = packages.map {
+                              try { pm.getApplicationLabel(it.applicationInfo).toString() + "\n(" + it.packageName + ")" } catch (_: Exception) { it.packageName }
+                          }.toTypedArray()
+
+                          val pNames = packages.map { it.packageName }.toTypedArray()
+
+                          AlertDialog.Builder(this)
+                              .setTitle("اختر تطبيقاً لتقييده")
+                              .setItems(names) { _, which ->
+                                  etTargetApp.setText(pNames[which])
                               }
-                          }
+                              .show()
+                      } catch (e: Exception) {
+                          Toast.makeText(this, "تعذر جلب التطبيقات", Toast.LENGTH_SHORT).show()
                       }
                   }
 
-                  private fun applySpeedLimit(kbytesPerSec: Int, isMobileData: Boolean): Boolean {
-                      val kbits = kbytesPerSec * 8
-                      val interfaces = if (isMobileData) {
-                          listOf("rmnet_data0", "rmnet_data1", "rmnet_data2", "ccmni0", "ccmni1", "pdp0")
+                  @Deprecated("Deprecated in Java")
+                  override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+                      super.onActivityResult(requestCode, resultCode, data)
+                      if (requestCode == 1002 && resultCode == Activity.RESULT_OK) {
+                          launchVpnService()
+                      }
+                  }
+
+                  private fun launchVpnService() {
+                      val targetPkg = etTargetApp.text.toString().trim()
+                      val blockApp = cbBlockApp.isChecked
+
+                      val intent = Intent(this, SpeedVpnService::class.java).apply {
+                          putExtra("downKB", downSpeedKB)
+                          putExtra("upKB", upSpeedKB)
+                          putExtra("targetPkg", targetPkg)
+                          putExtra("blockApp", blockApp)
+                      }
+
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          startForegroundService(intent)
                       } else {
-                          listOf("wlan0")
+                          startService(intent)
                       }
 
-                      val commands = mutableListOf<String>()
-                      for (iface in interfaces) {
-                          commands.add("tc qdisc del dev $iface root 2>/dev/null || true")
-                          commands.add("tc qdisc del dev $iface ingress 2>/dev/null || true")
-                          commands.add("tc qdisc add dev $iface root tbf rate ${kbits}kbit burst 32kbit latency 400ms 2>/dev/null || true")
-                          commands.add("tc qdisc add dev $iface handle ffff: ingress 2>/dev/null || true")
-                          commands.add("tc filter add dev $iface parent ffff: protocol ip prio 50 u32 match ip src 0.0.0.0/0 police rate ${kbits}kbit burst 64kbit drop flowid :1 2>/dev/null || true")
-                      }
-
-                      return executeSuCommands(commands)
+                      tvStatus.text = if (blockApp) "نشط (Firewall): تم حظر التطبيق" else "نشط (VPN Elite): تنزيل $downSpeedKB | رفع $upSpeedKB KB/s"
+                      tvStatus.setTextColor(Color.parseColor("#10B981"))
                   }
 
-                  private fun resetSpeedLimit(): Boolean {
-                      val allInterfaces = listOf("wlan0", "rmnet_data0", "rmnet_data1", "rmnet_data2", "ccmni0", "ccmni1", "pdp0")
-                      val commands = mutableListOf<String>()
-                      for (iface in allInterfaces) {
-                          commands.add("tc qdisc del dev $iface root 2>/dev/null || true")
-                          commands.add("tc qdisc del dev $iface ingress 2>/dev/null || true")
-                      }
-                      return executeSuCommands(commands)
+                  private fun stopAllEngines() {
+                      stopLocalProxyEngine()
+                      val intent = Intent(this, SpeedVpnService::class.java).apply { action = "STOP_VPN" }
+                      startService(intent)
+                      thread { resetRootTcLimit() }
+
+                      tvStatus.text = "الحالة: متوقف تماماً (السرعة كاملة)"
+                      tvStatus.setTextColor(Color.parseColor("#94A3B8"))
                   }
 
-                  private fun executeSuCommands(commands: List<String>): Boolean {
-                      return try {
-                          val process = Runtime.getRuntime().exec("su")
-                          val os = DataOutputStream(process.outputStream)
-                          for (cmd in commands) {
-                              os.writeBytes(cmd + "\n")
+                  private fun updateSliders(down: Int, up: Int) {
+                      downSpeedKB = down
+                      upSpeedKB = up
+                      seekBarDown.progress = down
+                      seekBarUp.progress = up
+                      tvDownLimitLabel.text = "حد التنزيل (Download): $down KB/s"
+                      tvUpLimitLabel.text = "حد الرفع (Upload): $up KB/s"
+                  }
+
+                  private fun startLocalProxyEngine(silent: Boolean) {
+                      if (!silent) {
+                          tvStatus.text = "نشط (الوكيل المحلي 127.0.0.1:8888)"
+                          tvStatus.setTextColor(Color.parseColor("#38BDF8"))
+                      }
+                      if (isProxyRunning) return
+                      isProxyRunning = true
+
+                      thread {
+                          try {
+                              proxyServerSocket = ServerSocket(8888)
+                              while (isProxyRunning) {
+                                  val client = proxyServerSocket?.accept() ?: break
+                                  thread { handleProxyConnection(client) }
+                              }
+                          } catch (_: Exception) {
+                              isProxyRunning = false
                           }
+                      }
+                  }
+
+                  private fun stopLocalProxyEngine() {
+                      isProxyRunning = false
+                      try { proxyServerSocket?.close() } catch (_: Exception) {}
+                      proxyServerSocket = null
+                  }
+
+                  private fun handleProxyConnection(client: Socket) {
+                      try {
+                          val clientIn = client.getInputStream()
+                          val clientOut = client.getOutputStream()
+                          val reader = BufferedReader(InputStreamReader(clientIn))
+                          val req = reader.readLine() ?: run { client.close(); return }
+                          val parts = req.split(" ")
+                          if (parts.size < 2) { client.close(); return }
+
+                          var line = reader.readLine()
+                          while (!line.isNullOrEmpty()) { line = reader.readLine() }
+
+                          if (parts[0].equals("CONNECT", ignoreCase = true)) {
+                              val hp = parts[1].split(":")
+                              val remote = Socket(hp[0], if (hp.size > 1) hp[1].toInt() else 443)
+                              clientOut.write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray())
+                              clientOut.flush()
+
+                              thread { transferThrottled(clientIn, remote.getOutputStream(), true) }
+                              transferThrottled(remote.getInputStream(), clientOut, false)
+                              remote.close()
+                          }
+                          client.close()
+                      } catch (_: Exception) {
+                          try { client.close() } catch (_: Exception) {}
+                      }
+                  }
+
+                  private fun transferThrottled(input: InputStream, output: OutputStream, isUpload: Boolean) {
+                      val buf = ByteArray(4096)
+                      var read: Int
+                      var start = System.currentTimeMillis()
+                      var total = 0L
+
+                      try {
+                          while (input.read(buf).also { read = it } != -1 && isProxyRunning) {
+                              output.write(buf, 0, read)
+                              output.flush()
+
+                              total += read
+                              val limit = if (isUpload) upSpeedKB else downSpeedKB
+                              val maxB = (limit * 1024L).coerceAtLeast(16384L)
+                              val expMs = (total * 1000L) / maxB
+                              val elapsed = System.currentTimeMillis() - start
+
+                              if (expMs > elapsed) { Thread.sleep(expMs - elapsed) }
+                              if (System.currentTimeMillis() - start >= 1000L) {
+                                  start = System.currentTimeMillis()
+                                  total = 0L
+                              }
+                          }
+                      } catch (_: Exception) {}
+                  }
+
+                  private fun applyRootTcLimit(downKB: Int, upKB: Int): Boolean {
+                      val dKbit = downKB * 8
+                      val uKbit = upKB * 8
+                      val ifaces = listOf("wlan0", "rmnet_data0", "ccmni0")
+                      val cmds = mutableListOf<String>()
+                      for (i in ifaces) {
+                          cmds.add("tc qdisc del dev $i root 2>/dev/null || true")
+                          cmds.add("tc qdisc del dev $i ingress 2>/dev/null || true")
+                          cmds.add("tc qdisc add dev $i root tbf rate ${uKbit}kbit burst 32kbit latency 400ms 2>/dev/null || true")
+                          cmds.add("tc qdisc add dev $i handle ffff: ingress 2>/dev/null || true")
+                          cmds.add("tc filter add dev $i parent ffff: protocol ip prio 50 u32 match ip src 0.0.0.0/0 police rate ${dKbit}kbit burst 64kbit drop flowid :1 2>/dev/null || true")
+                      }
+                      return runSu(cmds)
+                  }
+
+                  private fun resetRootTcLimit(): Boolean {
+                      val ifaces = listOf("wlan0", "rmnet_data0", "ccmni0")
+                      val cmds = ifaces.flatMap { listOf("tc qdisc del dev $it root 2>/dev/null || true", "tc qdisc del dev $it ingress 2>/dev/null || true") }
+                      return runSu(cmds)
+                  }
+
+                  private fun runSu(cmds: List<String>): Boolean {
+                      return try {
+                          val p = Runtime.getRuntime().exec("su")
+                          val os = DataOutputStream(p.outputStream)
+                          for (c in cmds) os.writeBytes(c + "\n")
                           os.writeBytes("exit\n")
                           os.flush()
-                          process.waitFor() == 0
-                      } catch (e: Exception) {
+                          p.waitFor() == 0
+                      } catch (_: Exception) {
                           false
                       }
                   }
+
+                  override fun onResume() {
+                      super.onResume()
+                      lastRxBytes = TrafficStats.getTotalRxBytes()
+                      lastTxBytes = TrafficStats.getTotalTxBytes()
+                      measurePingAsync()
+                      monitorHandler.post(speedMonitorRunnable)
+                  }
+
+                  override fun onPause() {
+                      super.onPause()
+                      monitorHandler.removeCallbacks(speedMonitorRunnable)
+                  }
               }
-          """)
+          ''')
           PYEOF
 
-      - name: Download Gradle and Build APK
+      - name: Download Gradle and Build Elite APK
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
           wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip
           unzip -q gradle-8.4-bin.zip
           ./gradle-8.4/bin/gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Upload Compiled APK
+      - name: Upload Elite APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SpeedLimiter-APK
+          name: SpeedLimiter-Elite-APK
           path: app/build/outputs/apk/debug/app-debug.apk
